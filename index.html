@@ -56,13 +56,14 @@
       padding:10px 14px;
       border-radius:12px;
       cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
     }
     .btn:hover { background:#e66c00; border-color:#e66c00; }
     .btn.secondary {
       background:#fff; color:var(--text);
       border-color:#ddd;
     }
-    .btn.secondary:hover { background:#fff3e6; border-color:var(--accent); color:var(--accent); }
+    .btn.secondary:hover { background:#fff3e6; border-color: var(--accent); color:var(--accent); }
     .btn:disabled { opacity:.5; cursor:not-allowed; }
     .input, .select {
       background:#fff;
@@ -83,18 +84,24 @@
       color: var(--accent);
     }
 
-    /* Header with gear */
-    .header {
-      display:flex; align-items:center; justify-content:center; position:relative;
-      margin-bottom: 12px;
-    }
-    .gear-btn {
-      position:absolute; left:0; top:50%; transform: translateY(-50%);
+    /* Fixed gear button (true top-left of viewport, under overlay) */
+    .fixed-gear {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
       background:#fff; border:1px solid #ddd; border-radius:12px; padding:8px; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      z-index: 1000; /* BELOW overlay/sidebar */
     }
-    .gear-btn:hover { border-color: var(--accent); background:#fff3e6; }
+    .fixed-gear:hover { border-color: var(--accent); background:#fff3e6; }
     .gear-icon { width:22px; height:22px; display:block; }
+
+    /* Header */
+    .header {
+      display:flex; align-items:center; justify-content:center;
+      margin-bottom: 12px;
+    }
 
     /* Sidebar (left drawer) */
     .sidebar-overlay {
@@ -130,10 +137,49 @@
     th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
     th { color: var(--muted); font-weight:600; }
 
+    /* Centered mode icon toggle (connected circles) */
+    .mode-icons {
+      position: relative;
+      max-width: 360px;
+      margin: 0 auto 12px;
+      padding: 18px 48px; /* side padding */
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      user-select:none;
+    }
+    /* EXACT OFFSETS FROM YOUR REQUEST */
+    .mode-icons::before {
+      content:'';
+      position:absolute;
+      top:50%;
+      left:115px;
+      right:112px;
+      height:2px;
+      background:#ffd5b3;
+      transform: translateY(-50%);
+      pointer-events:none;
+    }
+    .circle-toggle {
+      width:64px; height:64px; border-radius:50%;
+      background:#fff; border:2px solid #ffd5b3; color:var(--text);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition: transform .05s ease, background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,.04);
+    }
+    .circle-toggle:active { transform: translateY(1px); }
+    .circle-toggle .glyph { font-size:30px; line-height:1; }
+    .circle-toggle.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color:#fff;
+      box-shadow: 0 0 0 6px rgba(255,122,0,.12);
+    }
+    .circle-toggle:hover { border-color: var(--accent); }
+
     /* Game UI */
     .slots { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
     .slot {
-      min-width:  ninetypx; /* readable */
       min-width: 90px; min-height: 56px; padding: 8px 12px;
       border: 2px dashed #ddd; border-radius: 12px; background:#fff;
       display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
@@ -142,26 +188,46 @@
     .slot.checked.good { border-color: var(--good); background: rgba(42,157,143,.1); }
     .slot.checked.bad  { border-color: var(--bad); background: rgba(230,57,70,.08); }
     .slot .placeholder { color:#aaa; font-size:20px; }
-    .slot .token { font-size: 26px; } /* larger Arabic in slots */
+    .slot .token { font-size: 26px; }
 
-    /* NEW: big wide actions under slots */
-    .actions {
-      display:flex; gap:12px; margin-top:16px;
-    }
+    /* Big wide actions under slots */
+    .actions { display:flex; gap:12px; margin-top:16px; }
     .action-btn {
       flex:1; border-radius:14px; padding:16px; font-size:18px;
       display:flex; align-items:center; justify-content:center; gap:10px;
       cursor:pointer; border:1px solid transparent;
+      transition: background .15s ease, border-color .15s ease, transform .05s ease;
     }
-    .action-btn.secondary {
-      background:#fff; border-color:#ddd; color:var(--text);
-    }
+    .action-btn:active { transform: translateY(1px); }
+    .action-btn.secondary { background:#fff; border-color:#ddd; color:var(--text); }
     .action-btn.secondary:hover { background:#fff3e6; border-color: var(--accent); color:var(--accent); }
-    .action-btn.primary {
-      background: var(--accent); color:#fff; border-color: var(--accent);
-    }
+    .action-btn.primary { background: var(--accent); color:#fff; border-color: var(--accent); }
     .action-btn.primary:disabled { opacity:.5; cursor:not-allowed; }
     .action-btn svg { width:24px; height:24px; display:block; }
+
+    /* Success / fail pulse animations for the Check button */
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(42,157,143,.7); }
+      70% { box-shadow: 0 0 0 14px rgba(42,157,143,0); }
+      100% { box-shadow: 0 0 0 0 rgba(42,157,143,0); }
+    }
+    @keyframes pulseRed {
+      0% { box-shadow: 0 0 0 0 rgba(230,57,70,.7); }
+      70% { box-shadow: 0 0 0 14px rgba(230,57,70,0); }
+      100% { box-shadow: 0 0 0 0 rgba(230,57,70,0); }
+    }
+    .sim-success {
+      animation: pulseGreen 900ms ease-out;
+      background: var(--good) !important;
+      border-color: var(--good) !important;
+      color:#fff !important;
+    }
+    .sim-fail {
+      animation: pulseRed 900ms ease-out;
+      background: var(--bad) !important;
+      border-color: var(--bad) !important;
+      color:#fff !important;
+    }
 
     .token-btn {
       display:inline-block; padding:12px 14px; border-radius:12px;
@@ -195,6 +261,14 @@
 </head>
 <body>
   <div id="app">
+    <!-- Fixed gear button at true top-left (beneath overlay/sidebar) -->
+    <button class="fixed-gear" @click="sidebarOpen = true" title="Settings">
+      <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82V22a2 2 0 1 1-4 0v-.18A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33H2a2 2 0 1 1 0-4h.18A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.64 1.3l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1.82V2a2 2 0 1 1 4 0v.18A1.65 1.65 0 0 0 16 4.6c.36 0 .72-.13 1-.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .36.13.72.6 1 .31.19.66.3 1.02.33H22a2 2 0 1 1 0 4h-.18a1.65 1.65 0 0 0-1.82.33c-.47.28-.6.64-.6 1Z"/>
+      </svg>
+    </button>
+
     <!-- Sidebar overlay + drawer -->
     <div class="sidebar-overlay" :class="{ open: sidebarOpen }" @click="sidebarOpen=false"></div>
     <aside class="sidebar" :class="{ open: sidebarOpen }" @click.stop>
@@ -227,6 +301,29 @@
           </select>
         </div>
 
+        <!-- NEW: Repetition setting -->
+        <div class="field">
+          <label>Repetition (times per mode)</label>
+          <input class="input" type="number" min="1" max="20" v-model.number="repetitionTarget" @change="resetRepetitions" />
+          <div class="muted">Complete this many rounds in No Diacritics, then the same in With Diacritics.</div>
+        </div>
+
+        <!-- NEW: Verse range -->
+        <div class="field">
+          <label>Verse Range (within current surah)</label>
+          <div class="row">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <small class="muted">Start</small>
+              <input class="input" type="number" :min="1" :max="ayahs.length || 1" v-model.number="rangeStart" @change="normalizeRange(true)" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <small class="muted">End</small>
+              <input class="input" type="number" :min="1" :max="ayahs.length || 1" v-model.number="rangeEnd" @change="normalizeRange(false)" />
+            </div>
+          </div>
+          <div class="muted">Defaults to 1 … {{ ayahs.length || 1 }} for this surah.</div>
+        </div>
+
         <div class="field" v-if="tab==='tester' && entries.length">
           <label>Tester: Word Index</label>
           <input class="input" type="number" :max="Math.max(entries.length-1, 0)" min="0" v-model.number="index" @change="clampIndex" />
@@ -241,15 +338,32 @@
     </aside>
 
     <div class="container">
-      <!-- Header with centered title and gear top-left -->
+      <!-- Header with centered title -->
       <div class="header">
-        <button class="gear-btn" @click="sidebarOpen = true" title="Settings">
-          <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82V22a2 2 0 1 1-4 0v-.18A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33H2a2 2 0 1 1 0-4h.18A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.64 1.3l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1.82V2a2 2 0 1 1 4 0v.18A1.65 1.65 0 0 0 16 4.6c.36 0 .72-.13 1-.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .36.13.72.6 1 .31.19.66.3 1.02.33H22a2 2 0 1 1 0 4h-.18a1.65 1.65 0 0 0-1.82.33c-.47.28-.6.64-.6 1Z"/>
-          </svg>
-        </button>
         <h1 class="title">Arabic Word Tools — Vue 3</h1>
+      </div>
+
+      <!-- MODE ICONS (left: No Diacritics, right: With Diacritics) -->
+      <div class="mode-icons" role="group" aria-label="Diacritics mode">
+        <!-- No Diacritics (Easy) - LEFT -->
+        <button
+          class="circle-toggle arabic"
+          :class="{ active: useNoDiacritics }"
+          @click="setMode(true)"
+          aria-pressed="useNoDiacritics"
+          title="No Diacritics (Easy)">
+          <span class="glyph">ب</span>
+        </button>
+
+        <!-- With Diacritics (Hard) - RIGHT -->
+        <button
+          class="circle-toggle arabic"
+          :class="{ active: !useNoDiacritics }"
+          @click="setMode(false)"
+          aria-pressed="!useNoDiacritics"
+          title="With Diacritics (Hard)">
+          <span class="glyph">بَ</span>
+        </button>
       </div>
 
       <!-- CONTENT -->
@@ -276,7 +390,15 @@
       <!-- GAME TAB -->
       <template v-else>
         <div class="card" style="margin-bottom:16px;">
-          <div class="muted">Build the ayah one slot at a time. Only the next slot is revealed. Selecting a word reveals the following slot automatically.</div>
+          <div class="muted">
+            Build the ayah one slot at a time. Only the next slot is revealed. Selecting a word reveals the following slot automatically.
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <span class="badge">Mode: {{ useNoDiacritics ? 'No Diacritics' : 'With Diacritics' }}</span>
+            <span class="badge">Reps: {{ repetitionCount }} / {{ repetitionTarget }}</span>
+            <span class="badge">Range: {{ rangeStart }} → {{ rangeEnd }}</span>
+            <span class="badge">Ayah: {{ ayahIndex + 1 }}</span>
+          </div>
           <details style="margin-top:10px;">
             <summary>Show Ayah (answer)</summary>
             <div class="ayah-preview rtl arabic" style="margin-top:8px;" v-if="tokens.length">
@@ -310,7 +432,12 @@
             </button>
 
             <!-- Check (orange, white checkmark) -->
-            <button class="action-btn primary" :disabled="!isFilled" @click="checkGuess" title="Check">
+            <button
+              class="action-btn primary"
+              :class="{'sim-success': checkPulse==='success', 'sim-fail': checkPulse==='fail'}"
+              :disabled="!isFilled"
+              @click="checkGuess"
+              title="Check">
               <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
@@ -320,7 +447,7 @@
 
           <!-- feedback -->
           <div class="row" style="margin-top:12px;" v-if="checked">
-            <span class="badge" v-if="allCorrect">✅ Perfect!</span>
+            <span class="badge" v-if="allCorrect">✅ Correct!</span>
             <span class="badge" v-else>❌ Incorrect slots: {{ wrongPositions.join(', ') }}</span>
           </div>
         </div>
@@ -392,9 +519,18 @@
         checked: false,
         perCorrect: [],
         loadingSurah: false,
+        checkPulse: '',   // 'success' | 'fail' | ''
 
-        // diacritics mode retained internally
-        useNoDiacritics: false,
+        // repetition flow
+        repetitionTarget: 3,   // default in settings
+        repetitionCount: 0,    // progress within current mode
+
+        // verse range (1-based for UI)
+        rangeStart: 1,
+        rangeEnd: 1,
+
+        // diacritics mode (DEFAULT: No Diacritics first)
+        useNoDiacritics: true,
       }
     },
     computed: {
@@ -422,6 +558,63 @@
       }
     },
     methods: {
+      // --- Range helpers ---
+      normalizeRange(changedStart) {
+        const maxAyah = this.ayahs.length || 1;
+        // clamp
+        this.rangeStart = Math.max(1, Math.min(this.rangeStart || 1, maxAyah));
+        this.rangeEnd   = Math.max(1, Math.min(this.rangeEnd   || maxAyah, maxAyah));
+        // ensure start <= end
+        if (this.rangeStart > this.rangeEnd) {
+          if (changedStart) this.rangeEnd = this.rangeStart;
+          else this.rangeStart = this.rangeEnd;
+        }
+        // keep current ayah inside range
+        const idx1 = this.ayahIndex + 1;
+        if (idx1 < this.rangeStart) {
+          this.ayahIndex = this.rangeStart - 1; this.prepareAyah();
+        } else if (idx1 > this.rangeEnd) {
+          this.ayahIndex = this.rangeEnd - 1; this.prepareAyah();
+        }
+      },
+      goToNextAyahInRange() {
+        const nextIndex = this.ayahIndex + 1;
+        const endIndex = (this.rangeEnd - 1);
+        if (nextIndex <= endIndex) {
+          this.ayahIndex = nextIndex;
+          // reset to No Diacritics for new ayah and repetitions
+          this.useNoDiacritics = true;
+          this.repetitionCount = 0;
+          this.loadActive();
+          this.prepareAyah();
+          // subtle hint could be added here if desired
+        } else {
+          // finished the range
+          this.checked = true;
+          this.perCorrect = this.tokens.map(() => true);
+          this.checkPulse = 'success';
+          setTimeout(() => { this.checkPulse = ''; }, 950);
+          alert('Completed the selected verse range.');
+        }
+      },
+
+      // --- Repetition helpers ---
+      resetRepetitions() {
+        // When user changes the target, reset current progress
+        this.repetitionCount = 0;
+        if (this.tokens.length) this.restartRound();
+      },
+      restartRound() {
+        // reset the same ayah, same mode, reshuffle bank
+        this.guess = Array(this.tokens.length).fill('');
+        this.revealedCount = Math.min(1, this.tokens.length);
+        this.activeSlot = 0;
+        this.checked = false;
+        this.perCorrect = [];
+        this.checkPulse = '';
+        this.buildOptions(); // shuffles options
+      },
+
       // -------- Files (tester similarities) --------
       async loadActive() {
         try {
@@ -438,6 +631,13 @@
           this.map = {};
           alert('Could not read ' + this.activeFilename + ': ' + err.message + '\n(Ensure JSONs exist and use a local server)');
         }
+      },
+      setMode(noDia) {
+        if (this.useNoDiacritics === noDia) return;
+        this.useNoDiacritics = noDia;
+        this.repetitionCount = 0; // new mode -> reset progress
+        this.loadActive();
+        if (this.ayahs.length) this.prepareAyah();
       },
       clampIndex() {
         if (!this.entries.length) return;
@@ -458,7 +658,11 @@
           const data = await res.json();
           if (data.status !== 'OK') throw new Error(data.message || 'API error');
           this.ayahs = (data.data?.ayahs || []).map(a => a.text || '');
-          this.ayahIndex = 0;
+          // Default verse range to first..last
+          this.rangeStart = 1;
+          this.rangeEnd = this.ayahs.length || 1;
+          // reset and go to first in range
+          this.ayahIndex = this.rangeStart - 1;
           this.prepareAyah();
         } catch (e) {
           this.ayahs = [];
@@ -469,6 +673,7 @@
           this.checked = false;
           this.perCorrect = [];
           this.revealedCount = 0;
+          this.repetitionCount = 0;
           alert('Failed to load surah: ' + e.message);
         } finally {
           this.loadingSurah = false;
@@ -477,19 +682,25 @@
       prepareAyah() {
         const noDia = this.useNoDiacritics;
         const line = this.ayahs[this.ayahIndex] || '';
-        this.tokens = tokenizeSpace(line, { noDia });
-        this.guess = Array(this.tokens.length).fill('');
-        this.revealedCount = Math.min(1, this.tokens.length);
+        const tokensRaw = tokenizeSpace(line, { noDia });
+        this.tokens = tokensRaw;
+        this.guess = Array(tokensRaw.length).fill('');
+        this.revealedCount = Math.min(1, tokensRaw.length);
         this.activeSlot = 0;
         this.checked = false;
         this.perCorrect = [];
+        this.checkPulse = '';
+        this.repetitionCount = 0; // new ayah -> reset progress
         this.buildOptions();
       },
       async randomAyah() {
         this.surah = Math.floor(Math.random() * 114) + 1;
         await this.loadSurah();
         if (this.ayahs.length) {
-          this.ayahIndex = Math.floor(Math.random() * this.ayahs.length);
+          // pick random within current range
+          const startIdx = this.rangeStart - 1;
+          const endIdx = this.rangeEnd - 1;
+          this.ayahIndex = Math.floor(Math.random() * (endIdx - startIdx + 1)) + startIdx;
           this.prepareAyah();
         }
       },
@@ -524,6 +735,7 @@
           this.activeSlot = i;
           this.checked = false;
           this.perCorrect = [];
+          this.checkPulse = '';
           this.buildOptions();
         }
       },
@@ -542,23 +754,45 @@
 
         this.buildOptions();
 
-        // Don't auto-check; wait for manual "Check"
+        // No auto-check; wait for manual Check
         this.checked = false;
         this.perCorrect = [];
+        this.checkPulse = '';
       },
       clearAll() {
-        this.guess = Array(this.tokens.length).fill('');
-        this.checked = false;
-        this.perCorrect = [];
-        this.revealedCount = Math.min(1, this.tokens.length);
-        this.activeSlot = 0;
-        this.buildOptions();
+        this.restartRound();
       },
       checkGuess() {
-        if (!this.isFilled) return; // button is disabled anyway
+        if (!this.isFilled) return; // disabled otherwise
         const eq = (a, b) => this.useNoDiacritics ? stripDiacritics(a) === stripDiacritics(b) : a === b;
         this.perCorrect = this.guess.map((g, i) => eq(g, this.tokens[i]));
         this.checked = true;
+
+        // Trigger success/fail pulse on the Check button
+        const success = this.perCorrect.every(Boolean);
+        this.checkPulse = success ? 'success' : 'fail';
+        setTimeout(() => { this.checkPulse = ''; }, 950);
+
+        // Handle repetition/phase progression
+        if (success) {
+          if (this.repetitionCount + 1 < this.repetitionTarget) {
+            // Next repetition in same mode, reshuffle and restart
+            this.repetitionCount += 1;
+            this.restartRound();
+          } else {
+            // Completed target reps in current mode
+            this.repetitionCount = 0;
+            if (this.useNoDiacritics) {
+              // switch to diacritics and restart same ayah
+              this.useNoDiacritics = false;
+              this.loadActive(); // load diacritics file
+              this.prepareAyah();
+            } else {
+              // Completed diacritics cycle too — advance to next ayah in range
+              this.goToNextAyahInRange();
+            }
+          }
+        }
       },
 
       // -------- CSS helpers --------
@@ -574,7 +808,7 @@
     },
     async mounted() {
       await this.loadActive();
-      await this.loadSurah();  // default surah 1
+      await this.loadSurah();  // default surah 1, defaults range to full surah
     }
   }).mount('#app');
   </script>
