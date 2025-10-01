@@ -5,162 +5,337 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arabic Word Similarity — Vue 3 Tester + Ayah Builder</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <!-- Hafs Uthmani webfont -->
+  <link href="https://fonts.cdnfonts.com/css/kfgqpc-hafs-uthmanic-script" rel="stylesheet">
+
   <style>
-    :root { --bg:#0b1020; --card:#121933; --muted:#9aa4c7; --text:#e7ecff; --accent:#7aa2f7; --bad:#ff6b6b; --good:#3ddc97; }
+    :root {
+      --bg:#ffffff;
+      --card:#fafafa;
+      --muted:#666666;
+      --text:#222222;
+      --accent:#ff7a00; /* orange accent */
+      --bad:#e63946;
+      --good:#2a9d8f;
+      --overlay: rgba(0,0,0,.35);
+    }
     html,body { height:100%; }
-    body { margin:0; font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", sans-serif; background:var(--bg); color:var(--text); }
-    .container { max-width: 1080px; margin: 32px auto; padding: 0 16px; }
-    .card { background: var(--card); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 20px; }
+    body {
+      margin:0;
+      font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding-bottom: 160px; /* space so content isn't behind the floating word bank */
+    }
+
+    /* Arabic font utility */
+    .arabic, .rtl, .ayah-preview, .token, .token-btn {
+      font-family: 'KFGQPC HAFS Uthmanic Script', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
+      font-variant-ligatures: contextual;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container { max-width: 1080px; margin: 24px auto; padding: 0 16px; }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.1);
+      padding: 20px;
+    }
     .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .tabs { display:flex; gap:10px; }
-    .tab-btn { background:#131c3b; border:1px solid #2b3770; padding:8px 12px; border-radius:12px; cursor:pointer; }
-    .tab-btn.active { background:#1a2552; border-color:#3a4aa0; }
-    input[type="number"], select { background:#0e1530; border:1px solid #263055; color:var(--text); padding:10px 12px; border-radius:12px; font-size:16px; }
-    input[type="number"] { width:120px; }
-    button { background: #1a2552; border:1px solid #2e3a72; color: var(--text); padding:10px 14px; border-radius:12px; cursor: pointer; }
-    button:hover { background:#233067; }
+    .title { font-size: 22px; margin: 0; }
     .muted { color: var(--muted); }
-    .title { font-size: 22px; margin: 0 0 12px 0; }
+
+    /* Buttons / inputs */
+    .btn {
+      background: var(--accent);
+      border:1px solid var(--accent);
+      color: #fff;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor: pointer;
+    }
+    .btn:hover { background:#e66c00; border-color:#e66c00; }
+    .btn.secondary {
+      background:#fff; color:var(--text);
+      border-color:#ddd;
+    }
+    .btn.secondary:hover { background:#fff3e6; border-color:var(--accent); color:var(--accent); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .input, .select {
+      background:#fff;
+      border:1px solid #ccc;
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      font-size:16px;
+    }
+    .select { min-width: 120px; }
+    .badge {
+      display:inline-block;
+      background:#fff3e6;
+      border:1px solid #ffd5b3;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color: var(--accent);
+    }
+
+    /* Header with gear */
+    .header {
+      display:flex; align-items:center; justify-content:center; position:relative;
+      margin-bottom: 12px;
+    }
+    .gear-btn {
+      position:absolute; left:0; top:50%; transform: translateY(-50%);
+      background:#fff; border:1px solid #ddd; border-radius:12px; padding:8px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .gear-btn:hover { border-color: var(--accent); background:#fff3e6; }
+    .gear-icon { width:22px; height:22px; display:block; }
+
+    /* Sidebar (left drawer) */
+    .sidebar-overlay {
+      position: fixed; inset: 0; background: var(--overlay);
+      display: none; z-index: 1200;
+    }
+    .sidebar-overlay.open { display:block; }
+    .sidebar {
+      position: fixed; top:0; left:0; height:100%; width: 320px; max-width: 90vw;
+      background:#fff; box-shadow: 4px 0 24px rgba(0,0,0,.15);
+      transform: translateX(-100%); transition: transform .25s ease;
+      z-index: 1201; display:flex; flex-direction:column;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid #eee;
+    }
+    .sidebar-title { font-weight:600; }
+    .sidebar-content { padding: 16px; overflow:auto; }
+    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+    .field label { font-size: 13px; color: var(--muted); }
+    .segmented {
+      display:inline-flex; background:#fafafa; border:1px solid #ddd; border-radius:12px; overflow:hidden;
+    }
+    .segmented button {
+      border:0; padding:8px 12px; cursor:pointer; background:transparent;
+    }
+    .segmented button.active { background: var(--accent); color:#fff; }
+
+    /* Tester table */
     table { width:100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid #2a3562; padding: 10px; text-align: left; }
+    th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
     th { color: var(--muted); font-weight:600; }
-    .badge { display:inline-block; background:#233067; border:1px solid #2f3b73; padding:4px 10px; border-radius:999px; font-size:12px; color:var(--muted); }
-    .word { font-size: 28px; font-weight: 700; letter-spacing: .2px; }
-    .footer { margin-top: 20px; font-size: 13px; color: var(--muted); }
-    .flex-between { display:flex; justify-content: space-between; align-items:center; gap: 10px; }
 
     /* Game UI */
-    .slots { display:flex; flex-wrap:wrap; gap:10px; }
+    .slots { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
     .slot {
-      min-width: 80px; min-height: 44px; padding: 6px 10px;
-      border: 2px dashed #2a3562; border-radius: 12px; background:#0f1734;
+      min-width:  ninetypx; /* readable */
+      min-width: 90px; min-height: 56px; padding: 8px 12px;
+      border: 2px dashed #ddd; border-radius: 12px; background:#fff;
       display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
     }
-    .slot.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(122,162,247,.15) inset; }
-    .slot.checked.good { border-color: rgba(61,220,151,.9); background: rgba(61,220,151,.08); }
-    .slot.checked.bad  { border-color: rgba(255,107,107,.9); background: rgba(255,107,107,.06); }
-    .slot .placeholder { color:#445089; font-size:18px; }
-    .slot .token { font-size: 22px; }
+    .slot.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,122,0,.15) inset; }
+    .slot.checked.good { border-color: var(--good); background: rgba(42,157,143,.1); }
+    .slot.checked.bad  { border-color: var(--bad); background: rgba(230,57,70,.08); }
+    .slot .placeholder { color:#aaa; font-size:20px; }
+    .slot .token { font-size: 26px; } /* larger Arabic in slots */
+
+    /* NEW: big wide actions under slots */
+    .actions {
+      display:flex; gap:12px; margin-top:16px;
+    }
+    .action-btn {
+      flex:1; border-radius:14px; padding:16px; font-size:18px;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      cursor:pointer; border:1px solid transparent;
+    }
+    .action-btn.secondary {
+      background:#fff; border-color:#ddd; color:var(--text);
+    }
+    .action-btn.secondary:hover { background:#fff3e6; border-color: var(--accent); color:var(--accent); }
+    .action-btn.primary {
+      background: var(--accent); color:#fff; border-color: var(--accent);
+    }
+    .action-btn.primary:disabled { opacity:.5; cursor:not-allowed; }
+    .action-btn svg { width:24px; height:24px; display:block; }
 
     .token-btn {
-      display:inline-block; padding:10px 12px; border-radius:12px;
-      border:1px solid #2f3b73; background:#1a2552; margin:6px; cursor:pointer;
-      user-select:none; font-size:22px;
+      display:inline-block; padding:12px 14px; border-radius:12px;
+      border:1px solid #ddd; background:#fff; margin:6px; cursor:pointer;
+      user-select:none; font-size:26px; color:var(--text);
     }
-    .token-btn:hover { background:#233067; }
+    .token-btn:hover { background:#fff3e6; border-color: var(--accent); color:var(--accent); }
 
-    .ayah-preview { font-size:22px; line-height:1.8; white-space:pre-wrap; }
+    /* Floating word bank */
+    .word-bank {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fafafa;
+      border-top: 2px solid #eee;
+      padding: 12px 16px;
+      text-align: center;
+      box-shadow: 0 -2px 8px rgba(0,0,0,.05);
+      z-index: 1100;
+    }
+    .word-bank .muted { display:block; margin-bottom:8px; }
+    .word-bank-inner { max-width: 1080px; margin: 0 auto; padding: 0 8px; }
 
-    details summary { cursor:pointer; color: var(--muted); }
+    .ayah-preview { font-size:28px; line-height:2; white-space:pre-wrap; }
 
-    /* RTL -------------------------------------------------- */
-    .rtl { direction: rtl; }                   /* makes rows flow right-to-left */
-    .ayah-preview.rtl { text-align: right; }   /* nicer for reading Arabic */
+    /* RTL */
+    .rtl { direction: rtl; }
+    .ayah-preview.rtl { text-align: right; }
   </style>
 </head>
 <body>
-  <div id="app" class="container">
-    <div class="card" style="margin-bottom:16px;">
-      <div class="flex-between">
-        <h1 class="title">Arabic Word Tools — Vue 3</h1>
-        <div class="tabs">
-          <button class="tab-btn" :class="{active: tab==='tester'}" @click="tab='tester'">Tester</button>
-          <button class="tab-btn" :class="{active: tab==='game'}" @click="tab='game'">Game</button>
+  <div id="app">
+    <!-- Sidebar overlay + drawer -->
+    <div class="sidebar-overlay" :class="{ open: sidebarOpen }" @click="sidebarOpen=false"></div>
+    <aside class="sidebar" :class="{ open: sidebarOpen }" @click.stop>
+      <div class="sidebar-header">
+        <div class="sidebar-title">Settings</div>
+        <button class="btn secondary" @click="sidebarOpen=false">Close</button>
+      </div>
+      <div class="sidebar-content">
+        <div class="field">
+          <label>Mode</label>
+          <div class="segmented">
+            <button :class="{active: tab==='game'}" @click="tab='game'">Game</button>
+            <button :class="{active: tab==='tester'}" @click="tab='tester'">Tester</button>
+          </div>
         </div>
-      </div>
 
-      <div class="row" style="gap:8px; margin-top:10px;">
-        <span class="badge">Mode:</span>
-        <button :class="{ active: !useNoDiacritics }" @click="setMode(false)">With Diacritics (Hard)</button>
-        <button :class="{ active: useNoDiacritics }" @click="setMode(true)">No Diacritics (Easy)</button>
-        <span class="badge" v-if="entries.length && tab==='tester'">{{ entries.length.toLocaleString() }} words</span>
-      </div>
-    </div>
-
-    <!-- TESTER TAB (unchanged core) -->
-    <template v-if="tab==='tester'">
-      <div class="card" v-if="current">
-        <div class="row" style="margin-bottom:12px;">
-          <input type="number" :max="Math.max(entries.length-1, 0)" min="0" v-model.number="index" @change="clampIndex" />
-          <button @click="index = Math.max(index-1, 0)">Prev</button>
-          <button @click="index = Math.min(index+1, Math.max(entries.length-1, 0))">Next</button>
-          <button @click="randomIndex">Random</button>
-          <span class="muted">Current index: {{ index }}</span>
+        <div class="field">
+          <label>Surah (1–114)</label>
+          <input class="input" type="number" min="1" max="114" v-model.number="surah" />
+          <div class="row" style="margin-top:6px;">
+            <button class="btn" @click="loadSurah">Load Surah</button>
+            <button class="btn secondary" @click="randomAyah" :disabled="loadingSurah">Random</button>
+          </div>
         </div>
-        <div class="row"><span class="muted">Word</span><div class="word">{{ current.word }}</div></div>
-        <div class="muted" style="margin-top:6px;">Top {{ current.sims.length }} similar words</div>
-        <table style="margin-top:10px;">
-          <thead><tr><th style="width:60%">Word</th><th>Score</th></tr></thead>
-          <tbody>
-            <tr v-for="(pair, i) in current.sims" :key="i">
-              <td>{{ pair[0] }}</td>
-              <td>{{ formatScore(pair[1]) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="card" v-else><div class="muted">Loading {{ activeFilename }}...</div></div>
-      <div class="footer">JSON format: { "word": [["other", 0.92], ...], ... } — toggle loads <code>similarities_diacritics.json</code> or <code>similarities_no_diacritics.json</code>.</div>
-    </template>
 
-    <!-- GAME TAB: AYAH BUILDER -->
-    <template v-else>
-      <div class="card" style="margin-bottom:16px;">
-        <div class="row">
-          <label class="badge">Surah</label>
-          <input type="number" min="1" max="114" v-model.number="surah" @change="loadSurah" />
-          <label class="badge">Ayah</label>
-          <select v-model.number="ayahIndex" @change="prepareAyah" :disabled="!ayahs.length">
+        <div class="field">
+          <label>Ayah</label>
+          <select class="select" v-model.number="ayahIndex" :disabled="!ayahs.length" @change="prepareAyah">
             <option v-for="(a, i) in ayahs" :key="i" :value="i">{{ i+1 }}</option>
           </select>
-          <button @click="randomAyah" :disabled="!ayahs.length">Random Ayah</button>
-          <span class="badge" v-if="tokens.length">Words: {{ tokens.length }}</span>
         </div>
 
-        <!-- Hidden preview behind toggle; joins with spaces -->
-        <details style="margin-top:10px;">
-          <summary>Show Ayah (answer)</summary>
-          <div class="ayah-preview rtl" style="margin-top:8px;" v-if="tokens.length">
-            {{ tokens.join(' ') }}
+        <div class="field" v-if="tab==='tester' && entries.length">
+          <label>Tester: Word Index</label>
+          <input class="input" type="number" :max="Math.max(entries.length-1, 0)" min="0" v-model.number="index" @change="clampIndex" />
+          <div class="row" style="margin-top:6px;">
+            <button class="btn secondary" @click="index = Math.max(index-1, 0)">Prev</button>
+            <button class="btn secondary" @click="index = Math.min(index+1, Math.max(entries.length-1, 0))">Next</button>
+            <button class="btn" @click="randomIndex">Random</button>
           </div>
-        </details>
+          <div class="muted" style="margin-top:6px;">Words loaded: {{ entries.length.toLocaleString() }}</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="container">
+      <!-- Header with centered title and gear top-left -->
+      <div class="header">
+        <button class="gear-btn" @click="sidebarOpen = true" title="Settings">
+          <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82V22a2 2 0 1 1-4 0v-.18A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33H2a2 2 0 1 1 0-4h.18A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.64 1.3l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1.82V2a2 2 0 1 1 4 0v.18A1.65 1.65 0 0 0 16 4.6c.36 0 .72-.13 1-.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .36.13.72.6 1 .31.19.66.3 1.02.33H22a2 2 0 1 1 0 4h-.18a1.65 1.65 0 0 0-1.82.33c-.47.28-.6.64-.6 1Z"/>
+          </svg>
+        </button>
+        <h1 class="title">Arabic Word Tools — Vue 3</h1>
       </div>
 
-      <div class="card" v-if="tokens.length">
-        <div class="row" style="justify-content:space-between;">
-          <div class="muted">Build the ayah by filling each slot. Select a slot, then choose a word from the bank.</div>
-          <div class="row">
-            <button @click="clearAll">Clear All</button>
-            <button @click="reshuffle">Shuffle Options</button>
-            <button @click="checkGuess" :disabled="!isFilled">Check</button>
+      <!-- CONTENT -->
+      <template v-if="tab==='tester'">
+        <div class="card" v-if="current">
+          <div class="row" style="margin-bottom:8px;">
+            <span class="badge">Index: {{ index }}</span>
+          </div>
+          <div class="row"><span class="muted">Word</span><div class="word arabic rtl">{{ current.word }}</div></div>
+          <div class="muted" style="margin-top:6px;">Top {{ current.sims.length }} similar words</div>
+          <table style="margin-top:10px;">
+            <thead><tr><th style="width:60%">Word</th><th>Score</th></tr></thead>
+            <tbody>
+              <tr v-for="(pair, i) in current.sims" :key="i">
+                <td class="arabic rtl">{{ pair[0] }}</td>
+                <td>{{ formatScore(pair[1]) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card" v-else><div class="muted">Loading {{ activeFilename }}...</div></div>
+      </template>
+
+      <!-- GAME TAB -->
+      <template v-else>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="muted">Build the ayah one slot at a time. Only the next slot is revealed. Selecting a word reveals the following slot automatically.</div>
+          <details style="margin-top:10px;">
+            <summary>Show Ayah (answer)</summary>
+            <div class="ayah-preview rtl arabic" style="margin-top:8px;" v-if="tokens.length">
+              {{ tokens.join(' ') }}
+            </div>
+          </details>
+        </div>
+
+        <div class="card" v-if="tokens.length">
+          <!-- Slots: only revealed portion; centered, RTL -->
+          <div class="slots rtl arabic" style="margin-top:10px;">
+            <div v-for="(g,i) in guess.slice(0, revealedCount)" :key="i"
+                 class="slot"
+                 :class="slotClass(i)"
+                 @click="setActive(i)"
+                 :title="'Word '+(i+1)">
+              <span v-if="g" class="token">{{ g }}</span>
+              <span v-else class="placeholder">—</span>
+            </div>
+          </div>
+
+          <!-- Big wide actions under slots -->
+          <div class="actions">
+            <!-- Reset (circular arrow) -->
+            <button class="action-btn secondary" @click="clearAll" title="Reset">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 2v6h6"/>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L3 8"/>
+              </svg>
+              Reset
+            </button>
+
+            <!-- Check (orange, white checkmark) -->
+            <button class="action-btn primary" :disabled="!isFilled" @click="checkGuess" title="Check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              Check
+            </button>
+          </div>
+
+          <!-- feedback -->
+          <div class="row" style="margin-top:12px;" v-if="checked">
+            <span class="badge" v-if="allCorrect">✅ Perfect!</span>
+            <span class="badge" v-else>❌ Incorrect slots: {{ wrongPositions.join(', ') }}</span>
           </div>
         </div>
 
-        <!-- Slots: now flow right-to-left so the first word sits on the right -->
-        <div class="slots rtl" style="margin-top:10px;">
-          <div v-for="(g,i) in guess" :key="i"
-               class="slot"
-               :class="slotClass(i)"
-               @click="setActive(i)"
-               :title="'Word '+(i+1)">
-            <span v-if="g" class="token">{{ g }}</span>
-            <span v-else class="placeholder">—</span>
-          </div>
+        <div class="card" v-else>
+          <div class="muted">Load a surah to begin (gear icon).</div>
         </div>
+      </template>
+    </div> <!-- /.container -->
 
-        <div class="row" style="margin-top:14px; justify-content:space-between; align-items:center;">
-          <div class="row">
-            <span class="badge">Active Slot:</span>
-            <span class="badge">{{ activeSlot+1 }} / {{ tokens.length }}</span>
-          </div>
-          <div class="row">
-            <button @click="prevSlot" :disabled="activeSlot<=0">Prev Slot</button>
-            <button @click="nextSlot" :disabled="activeSlot>=tokens.length-1">Next Slot</button>
-          </div>
-        </div>
-
-        <div class="muted" style="margin-top:10px;">Word Bank (for current slot)</div>
-        <div class="rtl" style="margin-top:4px;">
+    <!-- Floating word bank (inside #app so Vue renders it) -->
+    <div class="word-bank" v-if="tab==='game' && tokens.length">
+      <div class="word-bank-inner">
+        <span class="muted">Word Bank</span>
+        <div class="rtl arabic">
           <span v-for="(opt,i) in options" :key="i"
                 class="token-btn"
                 @click="choose(opt)">
@@ -168,23 +343,13 @@
           </span>
           <span v-if="!options.length" class="muted">No options — check your JSONs / mode.</span>
         </div>
-
-        <div class="row" style="margin-top:12px;" v-if="checked">
-          <span class="badge" v-if="allCorrect">✅ Perfect!</span>
-          <span class="badge" v-else>❌ Incorrect slots: {{ wrongPositions.join(', ') }}</span>
-        </div>
       </div>
-
-      <div class="card" v-else>
-        <div class="muted">Load a surah to begin.</div>
-      </div>
-    </template>
-  </div>
+    </div>
+  </div> <!-- /#app -->
 
   <script>
   const { createApp } = Vue;
 
-  // --- Helpers (match preprocessor) ---
   const ARABIC_DIACRITICS_RE = /[\u0617-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06ED]/g;
   const INVISIBLES_RE = /[\ufeff\u200b\u200c\u200d\u2060]/g;
   const stripInvisibles = s => (s || '').replace(INVISIBLES_RE, '');
@@ -193,39 +358,43 @@
   function tokenizeSpace(line, { noDia=false } = {}) {
     line = stripInvisibles(line);
     const raw = line.split(/\s+/).filter(Boolean);
-    return raw
-      .map(w => {
-        w = norm(stripInvisibles(w.trim()));
-        return noDia ? stripDiacritics(w) : w;
-      })
-      .filter(w => w.length > 1);
+    return raw.map(w => {
+      w = norm(stripInvisibles(w.trim()));
+      return noDia ? stripDiacritics(w) : w;
+    }).filter(w => w.length > 1);
   }
 
   createApp({
     data() {
       return {
+        // UI state
+        sidebarOpen: false,
+
+        // tabs
         tab: 'game',
 
         // tester data
         entries: [],
-        map: {},           // { word: [[other, score], ...], ... }
+        map: {},
         index: 0,
-
-        // shared
-        useNoDiacritics: false,
 
         // game
         surah: 1,
         ayahs: [],
         ayahIndex: 0,
-        tokens: [],        // target tokens for the ayah, normalized to mode
-        guess: [],         // user selections (same length as tokens)
-        activeSlot: 0,     // which slot is selected
-        options: [],       // word bank for the activeSlot's target word
+        tokens: [],
+        guess: [],
+        activeSlot: 0,
+        options: [],
+        revealedCount: 0,
 
         // feedback
         checked: false,
         perCorrect: [],
+        loadingSurah: false,
+
+        // diacritics mode retained internally
+        useNoDiacritics: false,
       }
     },
     computed: {
@@ -253,7 +422,7 @@
       }
     },
     methods: {
-      // -------- Mode + files --------
+      // -------- Files (tester similarities) --------
       async loadActive() {
         try {
           const res = await fetch(this.activeFilename, { cache: 'no-store' });
@@ -263,19 +432,12 @@
           this.entries = keys.map(k => ({ word: k, sims: obj[k] })).filter(e => Array.isArray(e.sims));
           this.map = obj;
           this.index = 0;
-          // refresh options if in a round
           if (this.tokens.length) this.buildOptions();
         } catch (err) {
           this.entries = [];
           this.map = {};
           alert('Could not read ' + this.activeFilename + ': ' + err.message + '\n(Ensure JSONs exist and use a local server)');
         }
-      },
-      setMode(noDia) {
-        if (this.useNoDiacritics === noDia) return;
-        this.useNoDiacritics = noDia;
-        this.loadActive();
-        if (this.ayahs.length) this.prepareAyah();
       },
       clampIndex() {
         if (!this.entries.length) return;
@@ -289,6 +451,7 @@
       // -------- Surah / Ayah --------
       async loadSurah() {
         try {
+          this.loadingSurah = true;
           const url = `https://api.alquran.cloud/v1/surah/${this.surah}/quran-uthmani`;
           const res = await fetch(url, { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -305,7 +468,10 @@
           this.options = [];
           this.checked = false;
           this.perCorrect = [];
+          this.revealedCount = 0;
           alert('Failed to load surah: ' + e.message);
+        } finally {
+          this.loadingSurah = false;
         }
       },
       prepareAyah() {
@@ -313,26 +479,22 @@
         const line = this.ayahs[this.ayahIndex] || '';
         this.tokens = tokenizeSpace(line, { noDia });
         this.guess = Array(this.tokens.length).fill('');
+        this.revealedCount = Math.min(1, this.tokens.length);
         this.activeSlot = 0;
         this.checked = false;
         this.perCorrect = [];
         this.buildOptions();
       },
       async randomAyah() {
-        // pick random surah (1–114)
         this.surah = Math.floor(Math.random() * 114) + 1;
-
-        // load surah (API call)
         await this.loadSurah();
-
-        // pick random ayah within it
         if (this.ayahs.length) {
           this.ayahIndex = Math.floor(Math.random() * this.ayahs.length);
           this.prepareAyah();
         }
       },
 
-      // -------- Bank for current slot --------
+      // -------- Word bank for active slot --------
       lookupSimilar(word) {
         if (this.map[word]) return this.map[word];
         const keyNoDia = stripDiacritics(word);
@@ -344,12 +506,10 @@
         const set = new Set();
         if (target) set.add(target);
         const sims = target ? this.lookupSimilar(target) : [];
-        for (const [other, _s] of sims) {
+        for (const [other] of sims) {
           set.add(this.useNoDiacritics ? stripDiacritics(other) : other);
         }
-        // basic dedupe + remove 1-char
         const arr = Array.from(set).filter(w => w && w.length > 1);
-        // shuffle
         for (let i = arr.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -360,50 +520,48 @@
 
       // -------- Slots & choosing --------
       setActive(i) {
-        this.activeSlot = i;
-        this.checked = false; // reset feedback until next check
-        this.perCorrect = [];
-        this.buildOptions();
+        if (i >= 0 && i < this.revealedCount) {
+          this.activeSlot = i;
+          this.checked = false;
+          this.perCorrect = [];
+          this.buildOptions();
+        }
       },
       choose(opt) {
-        // set the chosen word in the current slot
         this.guess[this.activeSlot] = opt;
 
-        // move to the next empty slot (right-to-left UI, but indices still increase)
-        const nextEmpty = this.guess.findIndex((g, i) => !g && i > this.activeSlot);
-        if (nextEmpty !== -1) {
-          this.activeSlot = nextEmpty;
-        } else if (this.activeSlot < this.guess.length - 1) {
-          this.activeSlot++;
+        // If all revealed slots are filled and there are more, reveal the next one
+        const revealedEmpty = this.guess.slice(0, this.revealedCount).some(g => !g);
+        if (!revealedEmpty && this.revealedCount < this.tokens.length) {
+          this.revealedCount += 1;
         }
 
-        // show the correct word bank for the newly active slot
+        // Move to next empty within revealed
+        const nextEmpty = this.guess.findIndex((g, i) => !g && i < this.revealedCount);
+        this.activeSlot = nextEmpty !== -1 ? nextEmpty : Math.min(this.revealedCount - 1, this.tokens.length - 1);
+
         this.buildOptions();
 
-        // any prior check results are now stale
+        // Don't auto-check; wait for manual "Check"
         this.checked = false;
         this.perCorrect = [];
-      },     
+      },
       clearAll() {
         this.guess = Array(this.tokens.length).fill('');
         this.checked = false;
         this.perCorrect = [];
+        this.revealedCount = Math.min(1, this.tokens.length);
         this.activeSlot = 0;
         this.buildOptions();
       },
-      prevSlot() { if (this.activeSlot > 0) { this.activeSlot--; this.buildOptions(); } },
-      nextSlot() { if (this.activeSlot < this.tokens.length - 1) { this.activeSlot++; this.buildOptions(); } },
-
-      // -------- Checking --------
       checkGuess() {
-        if (!this.isFilled) {
-          alert('Fill all slots before checking.');
-          return;
-        }
+        if (!this.isFilled) return; // button is disabled anyway
         const eq = (a, b) => this.useNoDiacritics ? stripDiacritics(a) === stripDiacritics(b) : a === b;
         this.perCorrect = this.guess.map((g, i) => eq(g, this.tokens[i]));
         this.checked = true;
       },
+
+      // -------- CSS helpers --------
       slotClass(i) {
         return {
           active: i === this.activeSlot,
